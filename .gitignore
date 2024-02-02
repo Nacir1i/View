@@ -26,3 +26,6 @@ dist-ssr
 # App keys
 app_key.key
 app_key.key.pub
+
+# Env
+.env
