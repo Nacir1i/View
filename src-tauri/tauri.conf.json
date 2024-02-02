@@ -34,12 +34,20 @@
     },
     "windows": [
       {
-        "fullscreen": false,
+        "fullscreen": true,
         "resizable": true,
         "title": "view",
         "width": 800,
         "height": 600
       }
-    ]
+    ],
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://gist.github.com/Nacir1i/c96cb8f15d8c279f0ec8f89067bef07d/raw"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFRTFDQkREQzU2NzFENwpSV1RYY1ZiY3ZSenVEMlUwM3RITDZsVUllWm5zZlM1WHJ6Q2tqQ1NDcWFsNHgyS2hDdjB3elhDdwo="
+    }
   }
 }
