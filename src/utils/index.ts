@@ -9,7 +9,7 @@ export const VIEW_CONFIG: Record<View, ViewConfig> = {
   FILE: {
     title: "FILE",
     backgroundColor: "#222831",
-    color: "#ffebbb",
+    color: "#fafafa",
   },
 } as const;
 
