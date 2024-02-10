@@ -1,14 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use chrono::offset::Utc;
+use chrono::DateTime;
 use std::{
     fs::{self, DirEntry},
     io,
     path::{Path, PathBuf},
 };
-extern crate chrono;
-use chrono::offset::Utc;
-use chrono::DateTime;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +26,13 @@ pub struct DirectoryContent {
     pub absolute_path: PathBuf,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FileEntity {
+    pub content: String,
+    pub path: PathBuf,
+    pub extension: String,
+}
+
 #[tauri::command]
 fn open_dir(path_string: &str) -> DirectoryContent {
     let mut vec: Vec<DirectoryEntity> = Vec::new();
@@ -41,6 +47,23 @@ fn open_dir(path_string: &str) -> DirectoryContent {
     DirectoryContent {
         data: vec,
         absolute_path,
+    }
+}
+
+#[tauri::command]
+fn open_file(path_string: &str) -> FileEntity {
+    let mut content = String::new();
+    let path = Path::new(path_string);
+
+    match read_file(path) {
+        Ok(res) => content = res,
+        Err(error) => println!("Error: {:?}", error),
+    };
+
+    FileEntity {
+        content,
+        path: path.to_path_buf(),
+        extension: "".into(),
     }
 }
 
@@ -74,6 +97,16 @@ fn read_dir(dir: &Path) -> Result<Vec<DirectoryEntity>, io::Error> {
     Ok(vec)
 }
 
+fn read_file(file: &Path) -> Result<String, io::Error> {
+    let mut content = String::new();
+
+    if file.is_file() {
+        content = fs::read_to_string(file)?;
+    }
+
+    Ok(content)
+}
+
 fn entry_size(entry: &DirEntry) -> io::Result<u64> {
     let mut size: u64 = 0;
 
@@ -92,7 +125,7 @@ fn entry_size(entry: &DirEntry) -> io::Result<u64> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_dir])
+        .invoke_handler(tauri::generate_handler![open_dir, open_file])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
