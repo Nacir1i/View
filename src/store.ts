@@ -1,15 +1,5 @@
 import { ref } from "vue";
-import { View } from "./utils/interface";
-
-interface ViewStore {
-  currentView: View;
-  setCurrentView(view: View): void;
-}
-
-interface DirectoryStore {
-  path: string;
-  setPath(path: string): Promise<void>;
-}
+import { DirectoryStore, FileStore, ViewStore } from "./utils/interface";
 
 export const view = ref<ViewStore>({
   currentView: "DIRECTORY",
@@ -27,6 +17,13 @@ export const directory = ref<DirectoryStore>({
 
 export const directoryAbsolutePath = ref<DirectoryStore>({
   path: "~",
+  async setPath(path) {
+    this.path = path;
+  },
+});
+
+export const file = ref<FileStore>({
+  path: "",
   async setPath(path) {
     this.path = path;
   },
