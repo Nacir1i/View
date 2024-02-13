@@ -13,13 +13,13 @@ export type View = "DIRECTORY" | "FILE";
 
 export type Targets = "dir" | "file";
 
-export type Actions = "create" | "delete" | "rename" | "change";
+export type Actions = "change" | "open" | "quit" | "switch";
 
 export interface DirectoryEntity {
   name: string;
   path: string;
   created_at: string;
-  size: number;
+  // size: number;
   is_dir: boolean;
 }
 

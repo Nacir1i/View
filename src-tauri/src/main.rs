@@ -4,8 +4,7 @@
 use chrono::offset::Utc;
 use chrono::DateTime;
 use std::{
-    fs::{self, DirEntry},
-    io,
+    fs, io,
     path::{Path, PathBuf},
 };
 
@@ -16,7 +15,7 @@ pub struct DirectoryEntity {
     pub name: String,
     pub path: PathBuf,
     pub created_at: String,
-    pub size: Option<u64>,
+    // pub size: Option<u64>,
     pub is_dir: bool,
 }
 
@@ -35,13 +34,21 @@ pub struct FileEntity {
 
 #[tauri::command]
 fn open_dir(path_string: &str) -> DirectoryContent {
-    let mut vec: Vec<DirectoryEntity> = Vec::new();
     let path = Path::new(path_string);
-    let absolute_path = fs::canonicalize(&path).unwrap();
 
-    match read_dir(path) {
-        Ok(res) => vec = res,
-        Err(error) => println!("Error: {:?}", error),
+    let vec = match read_dir(path) {
+        Ok(res) => res,
+        Err(error) => {
+            println!("Error: {:?}", error);
+            Vec::new()
+        }
+    };
+    let absolute_path = match fs::canonicalize(&path) {
+        Ok(path) => path,
+        Err(error) => {
+            println!("Error: {:?}", error);
+            PathBuf::new()
+        }
     };
 
     DirectoryContent {
@@ -60,11 +67,20 @@ fn open_file(path_string: &str) -> FileEntity {
         Err(error) => println!("Error: {:?}", error),
     };
 
-    FileEntity {
+    let file = FileEntity {
         content,
         path: path.to_path_buf(),
         extension: "".into(),
-    }
+    };
+
+    println!("File: {:?}", file);
+
+    file
+}
+
+#[tauri::command]
+fn quit_app(app_handle: tauri::AppHandle) {
+    app_handle.exit(1);
 }
 
 fn read_dir(dir: &Path) -> Result<Vec<DirectoryEntity>, io::Error> {
@@ -78,18 +94,19 @@ fn read_dir(dir: &Path) -> Result<Vec<DirectoryEntity>, io::Error> {
             let system_time = entry.metadata()?.created()?;
             let datetime: DateTime<Utc> = system_time.into();
 
-            let size = match entry_size(&entry) {
-                Ok(entry_size) => entry_size,
-                Err(error) => {
-                    println!("Error {:?}", error);
-                    0
-                }
-            };
+            // let size = match entry_size(&entry) {
+            //     Ok(entry_size) => entry_size,
+            //     Err(error) => {
+            //         println!("Error {:?}", error);
+            //         0
+            //     }
+            // };
+
             vec.push(DirectoryEntity {
                 name: entry.file_name().into_string().unwrap(),
                 path: absolute_path,
                 created_at: datetime.format("%d/%m/%Y %T").to_string(),
-                size: Some(size),
+                // size: Some(size),
                 is_dir,
             })
         }
@@ -107,25 +124,25 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
     Ok(content)
 }
 
-fn entry_size(entry: &DirEntry) -> io::Result<u64> {
-    let mut size: u64 = 0;
+// fn entry_size(entry: &DirEntry) -> io::Result<u64> {
+//     let mut size: u64 = 0;
 
-    if entry.path().is_file() {
-        size = entry.metadata()?.len();
-    } else {
-        for entity in fs::read_dir(entry.path())? {
-            let entity = entity?;
+//     if entry.path().is_file() {
+//         size = entry.metadata()?.len();
+//     } else {
+//         for entity in fs::read_dir(entry.path())? {
+//             let entity = entity?;
 
-            size += entry_size(&entity)?;
-        }
-    }
+//             size += entry_size(&entity)?;
+//         }
+//     }
 
-    Ok(size)
-}
+//     Ok(size)
+// }
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_dir, open_file])
+        .invoke_handler(tauri::generate_handler![open_dir, open_file, quit_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

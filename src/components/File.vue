@@ -4,15 +4,14 @@ import { computed, onMounted, ref, watch } from "vue";
 import { FileEntity } from "../utils/interface";
 import { file } from "../store";
 
-let content = ref<string>("lolrandomxd");
-let linesCount = computed<number>(() => {
+const content = ref<string>("lolrandomxd");
+const linesCount = computed<number>(() => {
   return content.value.split("\n").length;
 });
 
 async function initContent() {
   const data = await invoke<FileEntity>("open_file", {
-    pathString:
-      "/home/linuxlolrandomxd/Desktop/dev/view/src-tauri/tauri.conf.json",
+    pathString: file.value.path,
   });
 
   if (data) {
@@ -24,12 +23,12 @@ watch(file.value, async (_newContent, _oldContent) => {
   initContent();
 });
 
-onMounted(async () => {
+onMounted(() => {
   initContent();
 });
 </script>
 <template>
-  <div class="flex justify-start items-start gap-2 w-full h-full overflow-auto">
+  <div class="flex justify-start items-start gap-2 w-full h-full">
     <ul class="text-gray-500 text-right">
       <li v-for="i in linesCount">{{ i }}</li>
     </ul>
