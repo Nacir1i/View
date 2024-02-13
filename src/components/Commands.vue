@@ -21,7 +21,7 @@ function interpretCommand() {
 
 function focusInput() {
   inputRef.value?.focus();
-  container.value?.lastElementChild?.scrollIntoView({ behavior: "instant" });
+  container.value?.lastElementChild?.scrollIntoView();
 }
 
 defineExpose({ inputRef });

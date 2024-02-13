@@ -3,8 +3,8 @@ import { directory, directoryAbsolutePath, file, view } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
 
 export class Interpreter {
-  private ACTIONS: string[] = ["change", "open", "quit", "switch"] as const;
-  private TARGET: string[] = ["dir", "file"] as const;
+  private ACTIONS: Readonly<string[]> = ["change", "open", "quit", "switch"];
+  private TARGET: Readonly<string[]> = ["dir", "file"];
 
   constructor(private readonly input: string) {}
 
