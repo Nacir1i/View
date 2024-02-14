@@ -39,7 +39,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="w-screen h-screen grid grid-cols-12 grid-rows-12 relative text-white text-sm font-oxanium"
+    class="w-screen h-screen grid grid-cols-12 grid-rows-12 relative text-white text-sm font-mono"
   >
     <div
       :style="config"
