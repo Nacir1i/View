@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { directoryAbsolutePath } from "../store";
+import { directoryAbsolutePath, commandHistory } from "../store";
 import { Interpreter } from "../utils/interpreter";
 
 let input = "";
 let inputRef = ref<HTMLInputElement | null>(null);
 let container = ref<HTMLDivElement | null>(null);
-let commandHistory = ref<string[]>([]);
 
 function interpretCommand() {
   const interpreter = new Interpreter(input);
-
-  commandHistory.value = [...commandHistory.value, input];
-
   interpreter.execute();
 
   input = "";
@@ -40,7 +36,7 @@ defineExpose({ inputRef });
       ref="container"
       class="w-full py-2 row-start-2 row-end-7 overflow-auto"
     >
-      <p v-for="command in commandHistory">{{ command }}</p>
+      <p v-for="command in commandHistory.history">{{ command }}</p>
       <div class="w-full flex items-center justify-start pl-2 gap-2 sticky">
         <p>~</p>
         <input
