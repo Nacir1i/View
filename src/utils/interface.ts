@@ -13,7 +13,7 @@ export type View = "DIRECTORY" | "FILE";
 
 export type Targets = "dir" | "file";
 
-export type Actions = "change" | "open" | "quit" | "switch";
+export type Actions = "change" | "open" | "quit" | "switch" | "clear";
 
 export interface DirectoryEntity {
   name: string;
@@ -37,4 +37,10 @@ export interface FileEntity {
 export interface FileStore {
   path: string;
   setPath(path: string): Promise<void>;
+}
+
+export interface CommandHistory {
+  history: string[];
+  addHistory(command: string): void;
+  clearHistory(): void;
 }
