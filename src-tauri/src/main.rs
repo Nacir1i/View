@@ -7,8 +7,24 @@ use std::{
     fs, io,
     path::{Path, PathBuf},
 };
+use thiserror;
 
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, thiserror::Error)]
+enum ViewError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+impl serde::Serialize for ViewError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_ref())
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DirectoryEntity {
@@ -33,49 +49,38 @@ pub struct FileEntity {
 }
 
 #[tauri::command]
-fn open_dir(path_string: &str) -> DirectoryContent {
+fn open_dir(path_string: &str) -> Result<DirectoryContent, ViewError> {
     let path = Path::new(path_string);
 
     let vec = match read_dir(path) {
         Ok(res) => res,
-        Err(error) => {
-            println!("Error: {:?}", error);
-            Vec::new()
-        }
+        Err(error) => return Err(ViewError::Io(error)),
     };
     let absolute_path = match fs::canonicalize(&path) {
         Ok(path) => path,
-        Err(error) => {
-            println!("Error: {:?}", error);
-            PathBuf::new()
-        }
+        Err(error) => return Err(ViewError::Io(error)),
     };
 
-    DirectoryContent {
+    Ok(DirectoryContent {
         data: vec,
         absolute_path,
-    }
+    })
 }
 
 #[tauri::command]
-fn open_file(path_string: &str) -> FileEntity {
-    let mut content = String::new();
+fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
     let path = Path::new(path_string);
 
-    match read_file(path) {
-        Ok(res) => content = res,
-        Err(error) => println!("Error: {:?}", error),
+    let content = match read_file(path) {
+        Ok(res) => res,
+        Err(error) => return Err(ViewError::Io(error)),
     };
 
-    let file = FileEntity {
+    Ok(FileEntity {
         content,
         path: path.to_path_buf(),
         extension: "".into(),
-    };
-
-    println!("File: {:?}", file);
-
-    file
+    })
 }
 
 #[tauri::command]
@@ -115,13 +120,10 @@ fn read_dir(dir: &Path) -> Result<Vec<DirectoryEntity>, io::Error> {
 }
 
 fn read_file(file: &Path) -> Result<String, io::Error> {
-    let mut content = String::new();
-
-    if file.is_file() {
-        content = fs::read_to_string(file)?;
+    match fs::read_to_string(file) {
+        Ok(data) => Ok(data),
+        Err(error) => Err(error),
     }
-
-    Ok(content)
 }
 
 // fn entry_size(entry: &DirEntry) -> io::Result<u64> {
