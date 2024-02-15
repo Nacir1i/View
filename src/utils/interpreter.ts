@@ -1,14 +1,28 @@
 import { Actions, Targets } from "./interface";
-import { directory, directoryAbsolutePath, file, view } from "../store";
+import {
+  commandHistory,
+  directory,
+  directoryAbsolutePath,
+  file,
+  view,
+} from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
 
 export class Interpreter {
-  private ACTIONS: Readonly<string[]> = ["change", "open", "quit", "switch"];
+  private ACTIONS: Readonly<string[]> = [
+    "change",
+    "open",
+    "quit",
+    "switch",
+    "clear",
+  ];
   private TARGET: Readonly<string[]> = ["dir", "file"];
 
   constructor(private readonly input: string) {}
 
   parse(): [Actions, Targets, string] | null {
+    commandHistory.value.addHistory(this.input);
+
     try {
       const split = this.input.split(" ");
 
@@ -25,7 +39,8 @@ export class Interpreter {
       return split as [Actions, Targets, string];
     } catch (error) {
       if (error instanceof ParseError) {
-        console.log(error.getError());
+        const parseError = error.getError();
+        commandHistory.value.addHistory(parseError);
       }
       return null;
     }
@@ -36,8 +51,6 @@ export class Interpreter {
     if (!args) return;
 
     const [action, target, arg] = args;
-
-    console.log(`Executing command: ${action} ${target} ${arg}`);
 
     switch (action) {
       case "quit":
@@ -55,6 +68,9 @@ export class Interpreter {
         break;
       case "switch":
         this.changeView();
+        break;
+      case "clear":
+        this.clearCommandHistory();
         break;
       default:
         break;
@@ -98,6 +114,10 @@ export class Interpreter {
 
   async quitApp() {
     await invoke<void>("quit_app");
+  }
+
+  clearCommandHistory() {
+    commandHistory.value.clearHistory();
   }
 }
 
