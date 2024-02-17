@@ -186,7 +186,7 @@ fn update_file(path: &Path, content: &str) -> Result<(), io::Error> {
     if !path.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
-            "File already exists",
+            "File does not exist exists",
         ));
     }
 
