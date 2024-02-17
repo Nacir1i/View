@@ -84,6 +84,36 @@ fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
 }
 
 #[tauri::command]
+fn create_file_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match create_file(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
+
+#[tauri::command]
+fn update_file_command(path_string: &str, content: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match update_file(path, content) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
+
+#[tauri::command]
+fn create_dir_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match create_dir(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
+
+#[tauri::command]
 fn quit_app(app_handle: tauri::AppHandle) {
     app_handle.exit(1);
 }
@@ -126,6 +156,45 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
     }
 }
 
+fn create_file(path: &Path) -> Result<(), io::Error> {
+    if path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File already exists",
+        ));
+    }
+
+    let _ = fs::File::create(path)?;
+
+    Ok(())
+}
+
+fn create_dir(path: &Path) -> Result<(), io::Error> {
+    if path.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "Directory already exists",
+        ));
+    }
+
+    let _ = fs::create_dir(path)?;
+
+    Ok(())
+}
+
+fn update_file(path: &Path, content: &str) -> Result<(), io::Error> {
+    if !path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File already exists",
+        ));
+    }
+
+    fs::write(path, content)?;
+
+    Ok(())
+}
+
 // fn entry_size(entry: &DirEntry) -> io::Result<u64> {
 //     let mut size: u64 = 0;
 
@@ -144,7 +213,14 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_dir, open_file, quit_app])
+        .invoke_handler(tauri::generate_handler![
+            open_dir,
+            open_file,
+            quit_app,
+            create_file_command,
+            create_dir_command,
+            update_file_command
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

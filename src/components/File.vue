@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { FileEntity } from "../utils/interface";
-import { commandHistory, file } from "../store";
+import { commandHistory, file, fileContent } from "../store";
 
-const content = ref<string>("");
 const linesCount = computed<number>(() => {
-  return content.value.split("\n").length;
+  return fileContent.value.content.split("\n").length;
 });
 
 async function initContent() {
@@ -16,7 +15,7 @@ async function initContent() {
     });
 
     if (data) {
-      content.value = data.content;
+      fileContent.value.content = data.content;
     }
   } catch (error: unknown) {
     commandHistory.value.addHistory(error as string);
@@ -38,7 +37,7 @@ onMounted(() => {
     </ul>
     <textarea
       data-role="none"
-      v-model="content"
+      v-model="fileContent.content"
       name="textarea"
       id="textarea"
       :rows="linesCount"

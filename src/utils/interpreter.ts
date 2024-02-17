@@ -4,6 +4,7 @@ import {
   directory,
   directoryAbsolutePath,
   file,
+  fileContent,
   view,
 } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
@@ -15,6 +16,8 @@ export class Interpreter {
     "quit",
     "switch",
     "clear",
+    "create",
+    "save",
   ];
   private TARGET: Readonly<string[]> = ["dir", "file"];
 
@@ -56,6 +59,9 @@ export class Interpreter {
       case "quit":
         this.quitApp();
         break;
+      case "save":
+        this.updateFile();
+        break;
       case "change":
         if (target === "dir") {
           this.changeDirectory(arg);
@@ -71,6 +77,13 @@ export class Interpreter {
         break;
       case "clear":
         this.clearCommandHistory();
+        break;
+      case "create":
+        if (target === "file") {
+          this.createFile(`${directoryAbsolutePath.value.path}/${arg}`);
+        } else if (target === "dir") {
+          this.createDir(`${directoryAbsolutePath.value.path}/${arg}`);
+        }
         break;
       default:
         break;
@@ -118,6 +131,33 @@ export class Interpreter {
 
   clearCommandHistory() {
     commandHistory.value.clearHistory();
+  }
+
+  async createFile(path: string) {
+    try {
+      await invoke<void>("create_file_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async createDir(path: string) {
+    try {
+      await invoke<void>("create_dir_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async updateFile() {
+    try {
+      await invoke<void>("update_file_command", {
+        pathString: file.value.path,
+        content: fileContent.value.content,
+      });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
   }
 }
 

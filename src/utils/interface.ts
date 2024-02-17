@@ -13,7 +13,14 @@ export type View = "DIRECTORY" | "FILE";
 
 export type Targets = "dir" | "file";
 
-export type Actions = "change" | "open" | "quit" | "switch" | "clear";
+export type Actions =
+  | "change"
+  | "open"
+  | "quit"
+  | "switch"
+  | "clear"
+  | "create"
+  | "save";
 
 export interface DirectoryEntity {
   name: string;
@@ -43,4 +50,9 @@ export interface CommandHistory {
   history: string[];
   addHistory(command: string): void;
   clearHistory(): void;
+}
+
+export interface FileContentStore {
+  content: string;
+  updateContent(content: string): void;
 }

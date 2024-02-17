@@ -2,6 +2,7 @@ import { ref } from "vue";
 import {
   CommandHistory,
   DirectoryStore,
+  FileContentStore,
   FileStore,
   ViewStore,
 } from "./utils/interface";
@@ -42,5 +43,12 @@ export const commandHistory = ref<CommandHistory>({
   },
   clearHistory() {
     this.history = [];
+  },
+});
+
+export const fileContent = ref<FileContentStore>({
+  content: "",
+  async updateContent(content) {
+    this.content = content;
   },
 });
