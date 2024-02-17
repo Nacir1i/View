@@ -1,14 +1,31 @@
 import { Actions, Targets } from "./interface";
-import { directory, directoryAbsolutePath, file, view } from "../store";
+import {
+  commandHistory,
+  directory,
+  directoryAbsolutePath,
+  file,
+  fileContent,
+  view,
+} from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
 
 export class Interpreter {
-  private ACTIONS: Readonly<string[]> = ["change", "open", "quit", "switch"];
+  private ACTIONS: Readonly<string[]> = [
+    "change",
+    "open",
+    "quit",
+    "switch",
+    "clear",
+    "create",
+    "save",
+  ];
   private TARGET: Readonly<string[]> = ["dir", "file"];
 
   constructor(private readonly input: string) {}
 
   parse(): [Actions, Targets, string] | null {
+    commandHistory.value.addHistory(this.input);
+
     try {
       const split = this.input.split(" ");
 
@@ -25,7 +42,8 @@ export class Interpreter {
       return split as [Actions, Targets, string];
     } catch (error) {
       if (error instanceof ParseError) {
-        console.log(error.getError());
+        const parseError = error.getError();
+        commandHistory.value.addHistory(parseError);
       }
       return null;
     }
@@ -37,11 +55,12 @@ export class Interpreter {
 
     const [action, target, arg] = args;
 
-    console.log(`Executing command: ${action} ${target} ${arg}`);
-
     switch (action) {
       case "quit":
         this.quitApp();
+        break;
+      case "save":
+        this.updateFile();
         break;
       case "change":
         if (target === "dir") {
@@ -55,6 +74,16 @@ export class Interpreter {
         break;
       case "switch":
         this.changeView();
+        break;
+      case "clear":
+        this.clearCommandHistory();
+        break;
+      case "create":
+        if (target === "file") {
+          this.createFile(`${directoryAbsolutePath.value.path}/${arg}`);
+        } else if (target === "dir") {
+          this.createDir(`${directoryAbsolutePath.value.path}/${arg}`);
+        }
         break;
       default:
         break;
@@ -98,6 +127,37 @@ export class Interpreter {
 
   async quitApp() {
     await invoke<void>("quit_app");
+  }
+
+  clearCommandHistory() {
+    commandHistory.value.clearHistory();
+  }
+
+  async createFile(path: string) {
+    try {
+      await invoke<void>("create_file_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async createDir(path: string) {
+    try {
+      await invoke<void>("create_dir_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async updateFile() {
+    try {
+      await invoke<void>("update_file_command", {
+        pathString: file.value.path,
+        content: fileContent.value.content,
+      });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
   }
 }
 

@@ -7,8 +7,24 @@ use std::{
     fs, io,
     path::{Path, PathBuf},
 };
+use thiserror;
 
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, thiserror::Error)]
+enum ViewError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+impl serde::Serialize for ViewError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_ref())
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DirectoryEntity {
@@ -33,49 +49,68 @@ pub struct FileEntity {
 }
 
 #[tauri::command]
-fn open_dir(path_string: &str) -> DirectoryContent {
+fn open_dir(path_string: &str) -> Result<DirectoryContent, ViewError> {
     let path = Path::new(path_string);
 
     let vec = match read_dir(path) {
         Ok(res) => res,
-        Err(error) => {
-            println!("Error: {:?}", error);
-            Vec::new()
-        }
+        Err(error) => return Err(ViewError::Io(error)),
     };
     let absolute_path = match fs::canonicalize(&path) {
         Ok(path) => path,
-        Err(error) => {
-            println!("Error: {:?}", error);
-            PathBuf::new()
-        }
+        Err(error) => return Err(ViewError::Io(error)),
     };
 
-    DirectoryContent {
+    Ok(DirectoryContent {
         data: vec,
         absolute_path,
+    })
+}
+
+#[tauri::command]
+fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
+    let path = Path::new(path_string);
+
+    let content = match read_file(path) {
+        Ok(res) => res,
+        Err(error) => return Err(ViewError::Io(error)),
+    };
+
+    Ok(FileEntity {
+        content,
+        path: path.to_path_buf(),
+        extension: "".into(),
+    })
+}
+
+#[tauri::command]
+fn create_file_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match create_file(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
     }
 }
 
 #[tauri::command]
-fn open_file(path_string: &str) -> FileEntity {
-    let mut content = String::new();
+fn update_file_command(path_string: &str, content: &str) -> Result<(), ViewError> {
     let path = Path::new(path_string);
 
-    match read_file(path) {
-        Ok(res) => content = res,
-        Err(error) => println!("Error: {:?}", error),
-    };
+    match update_file(path, content) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
 
-    let file = FileEntity {
-        content,
-        path: path.to_path_buf(),
-        extension: "".into(),
-    };
+#[tauri::command]
+fn create_dir_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
 
-    println!("File: {:?}", file);
-
-    file
+    match create_dir(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
 }
 
 #[tauri::command]
@@ -115,13 +150,49 @@ fn read_dir(dir: &Path) -> Result<Vec<DirectoryEntity>, io::Error> {
 }
 
 fn read_file(file: &Path) -> Result<String, io::Error> {
-    let mut content = String::new();
+    match fs::read_to_string(file) {
+        Ok(data) => Ok(data),
+        Err(error) => Err(error),
+    }
+}
 
-    if file.is_file() {
-        content = fs::read_to_string(file)?;
+fn create_file(path: &Path) -> Result<(), io::Error> {
+    if path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File already exists",
+        ));
     }
 
-    Ok(content)
+    let _ = fs::File::create(path)?;
+
+    Ok(())
+}
+
+fn create_dir(path: &Path) -> Result<(), io::Error> {
+    if path.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "Directory already exists",
+        ));
+    }
+
+    let _ = fs::create_dir(path)?;
+
+    Ok(())
+}
+
+fn update_file(path: &Path, content: &str) -> Result<(), io::Error> {
+    if !path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File does not exist exists",
+        ));
+    }
+
+    fs::write(path, content)?;
+
+    Ok(())
 }
 
 // fn entry_size(entry: &DirEntry) -> io::Result<u64> {
@@ -142,7 +213,14 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_dir, open_file, quit_app])
+        .invoke_handler(tauri::generate_handler![
+            open_dir,
+            open_file,
+            quit_app,
+            create_file_command,
+            create_dir_command,
+            update_file_command
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

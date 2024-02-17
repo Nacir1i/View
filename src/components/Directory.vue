@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { directory, directoryAbsolutePath } from "../store";
+import { commandHistory, directory, directoryAbsolutePath } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
 import { onMounted, ref, watch } from "vue";
 import { DirectoryEntity } from "../utils/interface";
@@ -8,16 +8,20 @@ import { DirectoryEntity } from "../utils/interface";
 const content = ref<DirectoryEntity[]>([]);
 
 async function initContent() {
-  const data = await invoke<{ data: DirectoryEntity[]; absolute_path: string }>(
-    "open_dir",
-    {
+  try {
+    const data = await invoke<{
+      data: DirectoryEntity[];
+      absolute_path: string;
+    }>("open_dir", {
       pathString: directory.value.path,
-    }
-  );
+    });
 
-  if (data) {
-    content.value = data.data;
-    directoryAbsolutePath.value.setPath(data.absolute_path);
+    if (data) {
+      content.value = data.data;
+      directoryAbsolutePath.value.setPath(data.absolute_path);
+    }
+  } catch (error) {
+    commandHistory.value.addHistory(error as string);
   }
 }
 
