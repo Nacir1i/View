@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { directoryAbsolutePath, commandHistory } from "../store";
+import { directoryStore, commandHistory } from "../store";
 import { Interpreter } from "../utils/interpreter";
 
 let input = "";
@@ -30,7 +30,7 @@ defineExpose({ inputRef });
     <div
       class="w-full bg-[#606470] flex justify-start items-center row-start-1 row-end-2"
     >
-      <h1>{{ directoryAbsolutePath.path }}</h1>
+      <h1>{{ directoryStore.path }}</h1>
     </div>
     <div
       ref="container"
