@@ -1,13 +1,7 @@
-import { Actions, Targets } from "./interface";
-import {
-  commandHistory,
-  directory,
-  directoryAbsolutePath,
-  file,
-  fileContent,
-  view,
-} from "../store";
+import { Actions, DirectoryEntity, FileEntity, Targets } from "./interface";
+import { commandHistory, directoryStore, fileStore, view } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
+import { join, resolve } from "@tauri-apps/api/path";
 
 export class Interpreter {
   private ACTIONS: Readonly<string[]> = [
@@ -80,9 +74,9 @@ export class Interpreter {
         break;
       case "create":
         if (target === "file") {
-          this.createFile(`${directoryAbsolutePath.value.path}/${arg}`);
+          this.createFile(`${directoryStore.value.path}/${arg}`);
         } else if (target === "dir") {
-          this.createDir(`${directoryAbsolutePath.value.path}/${arg}`);
+          this.createDir(`${directoryStore.value.path}/${arg}`);
         }
         break;
       default:
@@ -98,31 +92,39 @@ export class Interpreter {
   }
 
   async changeDirectory(path: string) {
-    view.value.setCurrentView("DIRECTORY");
+    try {
+      const jumpsArray = path.split("/");
+      const newPath = await resolve(directoryStore.value.path, ...jumpsArray);
 
-    const jumpsArray = path.split("/");
-    const absolutPathArray = directoryAbsolutePath.value.path.split("/");
+      const data = await invoke<{
+        data: DirectoryEntity[];
+        absolute_path: string;
+      }>("open_dir", {
+        pathString: newPath,
+      });
 
-    for (let i = 0; i < jumpsArray.length; i++) {
-      if (jumpsArray[i] === "..") {
-        absolutPathArray.pop();
-      } else {
-        absolutPathArray.push(jumpsArray[i]);
-      }
+      directoryStore.value.set(newPath, data.data);
+
+      view.value.setCurrentView("DIRECTORY");
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
     }
-
-    const newAbsolutPath = absolutPathArray.join("/");
-
-    await directory.value.setPath(newAbsolutPath);
   }
 
   async openFile(path: string) {
-    view.value.setCurrentView("FILE");
+    try {
+      const newPath = await join(directoryStore.value.path, path);
 
-    const newPath = `${directoryAbsolutePath.value.path}/${path}`;
-    console.log({ newPath });
+      const data = await invoke<FileEntity>("open_file", {
+        pathString: newPath,
+      });
 
-    await file.value.setPath(newPath);
+      fileStore.value.set(newPath, data.content);
+
+      view.value.setCurrentView("FILE");
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
   }
 
   async quitApp() {
@@ -152,8 +154,8 @@ export class Interpreter {
   async updateFile() {
     try {
       await invoke<void>("update_file_command", {
-        pathString: file.value.path,
-        content: fileContent.value.content,
+        pathString: fileStore.value.path,
+        content: fileStore.value.content,
       });
     } catch (error) {
       commandHistory.value.addHistory(error as string);
