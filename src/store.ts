@@ -1,8 +1,8 @@
 import { ref } from "vue";
 import {
   CommandHistory,
+  DirectoryEntity,
   DirectoryStore,
-  FileContentStore,
   FileStore,
   ViewStore,
 } from "./utils/interface";
@@ -14,25 +14,21 @@ export const view = ref<ViewStore>({
   },
 });
 
-export const directory = ref<DirectoryStore>({
-  path: "~",
-  async setPath(path) {
-    console.log("path", path);
-    this.path = path;
-  },
-});
-
-export const directoryAbsolutePath = ref<DirectoryStore>({
-  path: "~",
-  async setPath(path) {
-    this.path = path;
-  },
-});
-
-export const file = ref<FileStore>({
+export const directoryStore = ref<DirectoryStore>({
   path: "",
-  async setPath(path) {
+  content: [],
+  async set(path: string, content: DirectoryEntity[]) {
     this.path = path;
+    this.content = content;
+  },
+});
+
+export const fileStore = ref<FileStore>({
+  path: "",
+  content: "",
+  set(path: string, content: string) {
+    this.path = path;
+    this.content = content;
   },
 });
 
@@ -43,12 +39,5 @@ export const commandHistory = ref<CommandHistory>({
   },
   clearHistory() {
     this.history = [];
-  },
-});
-
-export const fileContent = ref<FileContentStore>({
-  content: "",
-  async updateContent(content) {
-    this.content = content;
   },
 });
