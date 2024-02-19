@@ -1,4 +1,10 @@
-import { Actions, DirectoryEntity, FileEntity, Targets } from "./interface";
+import {
+  Actions,
+  DirectoryEntity,
+  FileEntity,
+  Targets,
+  View,
+} from "./interface";
 import { commandHistory, directoryStore, fileStore, view } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
 import { join, resolve } from "@tauri-apps/api/path";
@@ -12,6 +18,7 @@ export class Interpreter {
     "clear",
     "create",
     "save",
+    "help",
   ];
   private TARGET: Readonly<string[]> = ["dir", "file"];
 
@@ -67,7 +74,13 @@ export class Interpreter {
         }
         break;
       case "switch":
-        this.changeView();
+        if (!target) {
+          this.changeView();
+        } else if (target === "file") {
+          this.changeView("FILE");
+        } else if (target === "dir") {
+          this.changeView("DIRECTORY");
+        }
         break;
       case "clear":
         this.clearCommandHistory();
@@ -79,12 +92,20 @@ export class Interpreter {
           this.createDir(`${directoryStore.value.path}/${arg}`);
         }
         break;
+      case "help":
+        this.changeView("HELP");
+        break;
       default:
         break;
     }
   }
 
-  changeView() {
+  changeView(newView?: View) {
+    if (newView) {
+      view.value.setCurrentView(newView);
+      return;
+    }
+
     const desiredView =
       view.value.currentView === "DIRECTORY" ? "FILE" : "DIRECTORY";
 

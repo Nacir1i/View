@@ -3,13 +3,18 @@ import { ViewConfig, View } from "./interface";
 export const VIEW_CONFIG: Record<View, ViewConfig> = {
   DIRECTORY: {
     title: "DIRECTORY",
-    backgroundColor: "#222831",
+    backgroundColor: "#32424a",
     color: "#ffebbb",
   },
   FILE: {
     title: "FILE",
-    backgroundColor: "#222831",
+    backgroundColor: "#333333",
     color: "#fafafa",
+  },
+  HELP: {
+    title: "HELP",
+    backgroundColor: "#393e46",
+    color: "#d3d6db",
   },
 } as const;
 

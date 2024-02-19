@@ -8,7 +8,7 @@ import {
 } from "./utils/interface";
 
 export const view = ref<ViewStore>({
-  currentView: "DIRECTORY",
+  currentView: "HELP",
   setCurrentView(view) {
     this.currentView = view;
   },

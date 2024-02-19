@@ -9,7 +9,7 @@ export interface ViewStore {
   setCurrentView(view: View): void;
 }
 
-export type View = "DIRECTORY" | "FILE";
+export type View = "DIRECTORY" | "FILE" | "HELP";
 
 export type Targets = "dir" | "file";
 
@@ -20,7 +20,8 @@ export type Actions =
   | "switch"
   | "clear"
   | "create"
-  | "save";
+  | "save"
+  | "help";
 
 export interface DirectoryEntity {
   name: string;
