@@ -9,6 +9,7 @@ import { viewConfig } from "./utils";
 import { desktopDir } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/tauri";
 import { DirectoryEntity } from "./utils/interface";
+import Help from "./components/Help.vue";
 
 const config = computed(() => viewConfig(view.value.currentView));
 const inputRef = ref<InstanceType<typeof Commands> | null>(null);
@@ -58,6 +59,9 @@ onMounted(() => {
       </template>
       <template v-else-if="view.currentView === 'FILE'">
         <File />
+      </template>
+      <template v-else-if="view.currentView === 'HELP'">
+        <Help />
       </template>
     </div>
     <Commands ref="inputRef" />
