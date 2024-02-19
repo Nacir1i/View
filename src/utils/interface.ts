@@ -9,7 +9,7 @@ export interface ViewStore {
   setCurrentView(view: View): void;
 }
 
-export type View = "DIRECTORY" | "FILE";
+export type View = "DIRECTORY" | "FILE" | "HELP";
 
 export type Targets = "dir" | "file";
 
@@ -20,7 +20,8 @@ export type Actions =
   | "switch"
   | "clear"
   | "create"
-  | "save";
+  | "save"
+  | "help";
 
 export interface DirectoryEntity {
   name: string;
@@ -32,7 +33,8 @@ export interface DirectoryEntity {
 
 export interface DirectoryStore {
   path: string;
-  setPath(path: string): Promise<void>;
+  content: DirectoryEntity[];
+  set(path: string, content: DirectoryEntity[]): void;
 }
 
 export interface FileEntity {
@@ -43,16 +45,12 @@ export interface FileEntity {
 
 export interface FileStore {
   path: string;
-  setPath(path: string): Promise<void>;
+  content: string;
+  set(path: string, content: string): void;
 }
 
 export interface CommandHistory {
   history: string[];
   addHistory(command: string): void;
   clearHistory(): void;
-}
-
-export interface FileContentStore {
-  content: string;
-  updateContent(content: string): void;
 }

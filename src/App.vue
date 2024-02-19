@@ -1,22 +1,18 @@
 <script setup lang="ts">
-import { directory, view } from "./store";
+import { view } from "./store";
 import Commands from "./components/Commands.vue";
 import Directory from "./components/Directory.vue";
 import File from "./components/File.vue";
+import { directoryStore } from "./store";
 import { computed, ref, onMounted } from "vue";
 import { viewConfig } from "./utils";
 import { desktopDir } from "@tauri-apps/api/path";
+import { invoke } from "@tauri-apps/api/tauri";
+import { DirectoryEntity } from "./utils/interface";
+import Help from "./components/Help.vue";
 
 const config = computed(() => viewConfig(view.value.currentView));
 const inputRef = ref<InstanceType<typeof Commands> | null>(null);
-
-async function setup() {
-  const initPath = await desktopDir();
-
-  console.log(initPath);
-
-  directory.value.setPath(initPath);
-}
 
 function focusInput() {
   inputRef.value?.inputRef?.focus();
@@ -27,6 +23,19 @@ function shortcutListener(event: KeyboardEvent) {
   if (event.ctrlKey && event.shiftKey && event.key === "C") {
     focusInput();
   }
+}
+
+async function setup() {
+  const desktopPath = await desktopDir();
+
+  const data = await invoke<{
+    data: DirectoryEntity[];
+    absolute_path: string;
+  }>("open_dir", {
+    pathString: desktopPath,
+  });
+
+  directoryStore.value.set(desktopPath, data.data);
 }
 
 onMounted(() => {
@@ -50,6 +59,9 @@ onMounted(() => {
       </template>
       <template v-else-if="view.currentView === 'FILE'">
         <File />
+      </template>
+      <template v-else-if="view.currentView === 'HELP'">
+        <Help />
       </template>
     </div>
     <Commands ref="inputRef" />
