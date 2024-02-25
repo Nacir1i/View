@@ -4,7 +4,7 @@
 use chrono::offset::Utc;
 use chrono::DateTime;
 use std::{
-    fs, io,
+    char, fs, io,
     path::{Path, PathBuf},
 };
 use thiserror;
@@ -43,7 +43,7 @@ pub struct DirectoryContent {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FileEntity {
-    pub content: String,
+    pub content: Vec<Vec<char>>,
     pub path: PathBuf,
     pub extension: String,
 }
@@ -76,8 +76,16 @@ fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
         Err(error) => return Err(ViewError::Io(error)),
     };
 
+    let lines = content.lines().collect::<Vec<&str>>();
+    let chars = lines
+        .iter()
+        .map(|s| s.chars().collect())
+        .collect::<Vec<Vec<char>>>();
+
+    // println!("Chars: {:?}", chars);
+
     Ok(FileEntity {
-        content,
+        content: chars,
         path: path.to_path_buf(),
         extension: "".into(),
     })
