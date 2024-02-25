@@ -25,8 +25,8 @@ export const directoryStore = ref<DirectoryStore>({
 
 export const fileStore = ref<FileStore>({
   path: "",
-  content: "",
-  set(path: string, content: string) {
+  content: [],
+  set(path: string, content: string[][]) {
     this.path = path;
     this.content = content;
   },
