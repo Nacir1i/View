@@ -1,4 +1,5 @@
 import { ViewConfig, View } from "./interface";
+import { LANG, Lang } from "./lang";
 
 export const VIEW_CONFIG: Record<View, ViewConfig> = {
   DIRECTORY: {
@@ -20,6 +21,10 @@ export const VIEW_CONFIG: Record<View, ViewConfig> = {
 
 export function viewConfig(view: View) {
   return VIEW_CONFIG[view] ?? null;
+}
+
+export function langConfig(lang: Lang) {
+  return LANG[lang] ?? { symbols: [], keyWords: [] };
 }
 
 export function convertDirSize(size: number): string {
