@@ -140,7 +140,7 @@ export class Interpreter {
         pathString: newPath,
       });
 
-      fileStore.value.set(newPath, data.content);
+      fileStore.value.set(newPath, data.content, data.extension);
 
       view.value.setCurrentView("FILE");
     } catch (error) {

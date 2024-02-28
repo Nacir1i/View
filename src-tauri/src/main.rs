@@ -4,6 +4,8 @@
 use chrono::offset::Utc;
 use chrono::DateTime;
 use std::{
+    char,
+    ffi::OsStr,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -43,9 +45,9 @@ pub struct DirectoryContent {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FileEntity {
-    pub content: String,
+    pub content: Vec<Vec<char>>,
     pub path: PathBuf,
-    pub extension: String,
+    pub extension: Option<String>,
 }
 
 #[tauri::command]
@@ -76,10 +78,21 @@ fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
         Err(error) => return Err(ViewError::Io(error)),
     };
 
+    let lines = content.lines().collect::<Vec<&str>>();
+    let chars = lines
+        .iter()
+        .map(|s| s.chars().collect())
+        .collect::<Vec<Vec<char>>>();
+
+    let file_extension = match path.extension().and_then(OsStr::to_str) {
+        Some(extension) => extension,
+        None => "",
+    };
+
     Ok(FileEntity {
-        content,
+        content: chars,
         path: path.to_path_buf(),
-        extension: "".into(),
+        extension: Some(file_extension.into()),
     })
 }
 
@@ -94,10 +107,21 @@ fn create_file_command(path_string: &str) -> Result<(), ViewError> {
 }
 
 #[tauri::command]
-fn update_file_command(path_string: &str, content: &str) -> Result<(), ViewError> {
+fn update_file_command(path_string: &str, content: Vec<Vec<char>>) -> Result<(), ViewError> {
     let path = Path::new(path_string);
 
-    match update_file(path, content) {
+    let mut content_vec: Vec<char> = Vec::new();
+
+    for line in content.into_iter() {
+        for char in line.into_iter() {
+            content_vec.push(char);
+        }
+        content_vec.push(0xA as char);
+    }
+
+    let content_string = content_vec.into_iter().collect::<String>();
+
+    match update_file(path, content_string) {
         Ok(_) => Ok(()),
         Err(error) => return Err(ViewError::Io(error)),
     }
@@ -182,7 +206,7 @@ fn create_dir(path: &Path) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn update_file(path: &Path, content: &str) -> Result<(), io::Error> {
+fn update_file(path: &Path, content: String) -> Result<(), io::Error> {
     if !path.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,

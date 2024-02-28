@@ -7,6 +7,14 @@ import {
   ViewStore,
 } from "./utils/interface";
 
+const HELLO = [
+  ["h", "o", "l", "l", "o", "!"],
+  [],
+  ["z", "e", "l", "l", "o", "!", " ", "g", "e", "l", "l", "o", "!"],
+  [],
+  ["f", "r", "o", "m", " ", "{", "ref", "}", ":"],
+];
+
 export const view = ref<ViewStore>({
   currentView: "HELP",
   setCurrentView(view) {
@@ -25,10 +33,12 @@ export const directoryStore = ref<DirectoryStore>({
 
 export const fileStore = ref<FileStore>({
   path: "",
-  content: "",
-  set(path: string, content: string) {
+  content: HELLO,
+  extension: "",
+  set(path: string, content: string[][], extension: string) {
     this.path = path;
     this.content = content;
+    this.extension = extension;
   },
 });
 

@@ -10,6 +10,7 @@ import { desktopDir } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/tauri";
 import { DirectoryEntity } from "./utils/interface";
 import Help from "./components/Help.vue";
+import { useEventListener } from "@vueuse/core";
 
 const config = computed(() => viewConfig(view.value.currentView));
 const inputRef = ref<InstanceType<typeof Commands> | null>(null);
@@ -39,11 +40,11 @@ async function setup() {
 }
 
 onMounted(() => {
-  document.addEventListener("keydown", shortcutListener);
-
   setup();
   focusInput();
 });
+
+useEventListener("keydown", shortcutListener);
 </script>
 
 <template>

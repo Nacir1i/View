@@ -38,15 +38,16 @@ export interface DirectoryStore {
 }
 
 export interface FileEntity {
-  content: string;
+  content: string[][];
   path: string;
-  extension?: string;
+  extension: string;
 }
 
 export interface FileStore {
   path: string;
-  content: string;
-  set(path: string, content: string): void;
+  content: string[][];
+  extension: string;
+  set(path: string, content: string[][], extension: string): void;
 }
 
 export interface CommandHistory {
@@ -54,3 +55,26 @@ export interface CommandHistory {
   addHistory(command: string): void;
   clearHistory(): void;
 }
+
+export interface Cursor {
+  index: { col: number; row: number };
+  set(index: { col: number; row: number }): void;
+  moveRight(): void;
+  moveLeft(): void;
+  moveUp(): void;
+  moveDown(): void;
+  scrollIntoView(): void;
+}
+
+export interface Content {
+  content: string[][];
+  type(key: string): void;
+  delete(): void;
+}
+
+export type CharData = {
+  char: string;
+  index: number;
+};
+
+export type OrderedContent = CharData[][];

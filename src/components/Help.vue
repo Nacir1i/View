@@ -20,7 +20,7 @@ import Kbd from "./Kbd.vue";
       <span class="bg-blue-400 text-black py-1 px-2 rounded-lg">TARGET</span>
       and Args
     </div>
-    <dir
+    <div
       class="w-[30rem] h-48 bg-slate-600 grid grid-cols-4 grid-rows-5 m-0 p-0"
     >
       <div
@@ -75,7 +75,7 @@ import Kbd from "./Kbd.vue";
       <div
         class="row-start-2 row-end-6 col-start-4 col-end-5 border border-white p-2"
       ></div>
-    </dir>
+    </div>
     <div>
       <h1>
         Examples: Change dir ../Desktop/dev || open file
