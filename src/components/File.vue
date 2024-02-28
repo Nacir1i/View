@@ -1,263 +1,165 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { Content, Cursor } from "../utils/interface";
+import { computed, ref } from "vue";
+import { useFocus } from "@vueuse/core";
 import { fileStore } from "../store";
+import CursorVue from "./Cursor.vue";
+import { langConfig } from "../utils";
 
-const HELLO = [
-  ["h", "o", "l", "l", "o", "!"],
-  [],
-  ["z", "e", "l", "l", "o", "!", " ", "g", "e", "l", "l", "o", "!"],
-  [],
-  ["b", "e", "v", "l", "o", "!"],
-];
+const cursorRef = ref<InstanceType<typeof CursorVue> | null>(null);
+const divRef = ref<HTMLDivElement | null>(null);
 
-let content = ref<Content>({
-  content: HELLO,
-  type(key: string) {
-    if (key === "\n") {
-      let targetLine = content.value.content[cursor.value.index.row];
+const { focused } = useFocus(divRef, { initialValue: false });
 
-      const newLine = targetLine.splice(0, cursor.value.index.col);
+function type(key: string) {
+  if (!cursorRef.value?.cursor.index) return;
 
-      this.content.splice(cursor.value.index.row, 0, newLine);
+  if (key === "\n") {
+    let targetLine = fileStore.value.content[cursorRef.value?.cursor.index.row];
 
-      cursor.value.set({ row: cursor.value.index.row + 1, col: 0 });
-    } else {
-      this.content[cursor.value.index.row].splice(
-        cursor.value.index.col,
-        0,
-        key
-      );
-      cursor.value.moveRight();
-    }
-  },
-  delete() {
-    if (cursor.value.index.col > 0) {
-      content.value.content[cursor.value.index.row].splice(
-        cursor.value.index.col - 1,
-        1
-      );
-      cursor.value.moveLeft();
-    } else if (cursor.value.index.row > 0) {
-      const currentRow = content.value.content[cursor.value.index.row];
-      const previousRow = content.value.content[cursor.value.index.row - 1];
-      const lastCharOfPreviousRow = previousRow[previousRow.length - 1];
+    const newLine = targetLine.splice(0, cursorRef.value?.cursor.index.col);
 
-      content.value.content[cursor.value.index.row - 1] =
-        previousRow.concat(currentRow);
-      content.value.content.splice(cursor.value.index.row, 1);
-      cursor.value.index.row--;
-      cursor.value.index.col = lastCharOfPreviousRow ? previousRow.length : 0;
-    }
-  },
-});
+    fileStore.value.content.splice(
+      cursorRef.value?.cursor.index.row,
+      0,
+      newLine
+    );
 
-let cursor = ref<Cursor>({
-  index: { row: 0, col: 0 },
-  set(index: { col: number; row: number }) {
-    this.index = index;
-  },
-  moveRight() {
-    let newIndex = { row: 0, col: 0 };
+    cursorRef.value?.cursor.set({
+      row: cursorRef.value?.cursor.index.row + 1,
+      col: 0,
+    });
+  } else {
+    fileStore.value.content[cursorRef.value?.cursor.index.row].splice(
+      cursorRef.value?.cursor.index.col,
+      0,
+      key
+    );
+    cursorRef.value?.cursor.moveRight();
+  }
+}
+function _delete() {
+  if (!cursorRef.value?.cursor.index) return;
 
-    const endOfRows = this.index.row === content.value.content.length - 1;
-    const endOfLine =
-      this.index.col === content.value.content[this.index.row].length;
+  if (cursorRef.value?.cursor.index.col > 0) {
+    fileStore.value.content[cursorRef.value?.cursor.index.row].splice(
+      cursorRef.value?.cursor.index.col - 1,
+      1
+    );
+    cursorRef.value?.cursor.moveLeft();
+  } else if (cursorRef.value?.cursor.index.row > 0) {
+    const currentRow =
+      fileStore.value.content[cursorRef.value?.cursor.index.row];
+    const previousRow =
+      fileStore.value.content[cursorRef.value?.cursor.index.row - 1];
+    const lastCharOfPreviousRow = previousRow[previousRow.length - 1];
 
-    if (endOfLine && endOfRows) {
-      return;
-    }
-    if (endOfLine) {
-      newIndex = { row: this.index.row + 1, col: 0 };
-    } else {
-      newIndex = { row: this.index.row, col: this.index.col + 1 };
-    }
+    fileStore.value.content[cursorRef.value?.cursor.index.row - 1] =
+      previousRow.concat(currentRow);
+    fileStore.value.content.splice(cursorRef.value?.cursor.index.row, 1);
 
-    this.set(newIndex);
-  },
-  moveLeft() {
-    let newIndex = { row: 1, col: 0 };
+    cursorRef.value?.cursor.set({
+      row: cursorRef.value?.cursor.index.row - 1,
+      col: lastCharOfPreviousRow ? previousRow.length : 0,
+    });
+  }
+}
 
-    const endOfRows = this.index.row === 0;
-    const endOfLine = this.index.col === 0;
+let formattedWords = computed(() => {
+  let computed: string[][] = [];
 
-    if (endOfRows && endOfLine) {
-      return;
-    }
-    if (endOfLine) {
-      newIndex = {
-        row: this.index.row - 1,
-        col: content.value.content[this.index.row - 1].length,
-      };
-    } else {
-      newIndex = { row: this.index.row, col: this.index.col - 1 };
-    }
+  for (let i = 0; i < fileStore.value.content.length; i++) {
+    let line: string[] = [];
 
-    this.set(newIndex);
-  },
-  moveUp() {
-    let newIndex = { row: 0, col: 0 };
-
-    const endOfRows = this.index.row === 0;
-    const colTooBig =
-      this.index.col > content.value.content[this.index.row - 1].length - 1;
-
-    if (endOfRows) {
-      return;
-    }
-    if (colTooBig) {
-      newIndex = {
-        row: this.index.row - 1,
-        col: content.value.content[this.index.row - 1].length,
-      };
-    } else {
-      newIndex = { row: this.index.row - 1, col: this.index.col };
-    }
-
-    this.set(newIndex);
-  },
-  moveDown() {
-    let newIndex = { row: 0, col: 0 };
-
-    const endOfRows = this.index.row === content.value.content.length - 1;
-    const colTooBig =
-      this.index.col > content.value.content[this.index.row + 1].length - 1;
-
-    if (endOfRows) {
-      return;
-    }
-    if (colTooBig) {
-      newIndex = {
-        row: this.index.row + 1,
-        col: content.value.content[this.index.row + 1].length,
-      };
-    } else {
-      newIndex = { row: this.index.row + 1, col: this.index.col };
-    }
-
-    this.set(newIndex);
-  },
-});
-
-let computedValue = computed(() => {
-  let computed = "";
-
-  for (let i = 0; i < content.value.content.length; i++) {
-    computed += "<div class='line'>";
-
-    const isLineIndexed = cursor.value.index.row === i;
-    const isLineEmpty = content.value.content[i].length === 0;
-    const isEndOfLineIndexed =
-      isLineIndexed &&
-      cursor.value.index.col == content.value.content[i].length;
-
+    const isLineEmpty = fileStore.value.content[i].length === 0;
     if (isLineEmpty) {
-      if (isLineIndexed) {
-        computed +=
-          "<span class='word'><span class='blink absolute'></span>&#160;</span></div>";
-      } else {
-        computed += "<span class='word'>&#160;</span></div>";
-      }
+      computed.push(line);
 
       continue;
     }
 
     let newWord = "";
 
-    for (let j = 0; j < content.value.content[i].length; j++) {
-      const isCharIndexed = isLineIndexed && cursor.value.index.col === j;
-      const isEndOfWord = content.value.content[i][j] === " ";
+    for (let j = 0; j < fileStore.value.content[i].length; j++) {
+      const isEndOfWord = fileStore.value.content[i][j] === " ";
 
-      if (isCharIndexed) {
-        newWord += "<span class='blink absolute'></span>";
-      }
-
-      if (isEndOfWord) {
-        computed += `<span class='word'>${newWord}&#8197;</span>`;
+      if (lang.value.symbols.includes(fileStore.value.content[i][j])) {
+        line.push(newWord);
+        line.push(fileStore.value.content[i][j]);
 
         newWord = "";
+      } else if (isEndOfWord) {
+        line.push(newWord);
+        line.push(" ");
+        newWord = "";
       } else {
-        newWord += `${content.value.content[i][j]}`;
+        newWord += `${fileStore.value.content[i][j]}`;
       }
     }
 
-    if (isEndOfLineIndexed) {
-      newWord += "<span class='blink absolute'></span>";
-    }
-
-    computed += `<span class='word'>${newWord}</span></div>`;
+    line.push(newWord);
+    computed.push(line);
   }
 
   return computed;
+});
+
+const lang = computed(() => {
+  return langConfig(fileStore.value.extension);
 });
 
 function keyEvent(event: KeyboardEvent) {
   if (!event.isTrusted) return;
 
   if (event.key.length === 1) {
-    content.value.type(event.key);
+    type(event.key);
   } else if (event.key === "Backspace") {
-    content.value.delete();
+    _delete();
   } else if (event.key === "Enter") {
-    content.value.type("\n");
-  } else if (event.key === "ArrowRight") {
-    cursor.value.moveRight();
-  } else if (event.key === "ArrowLeft") {
-    cursor.value.moveLeft();
-  } else if (event.key === "ArrowDown") {
-    cursor.value.moveDown();
-  } else if (event.key === "ArrowUp") {
-    cursor.value.moveUp();
+    type("\n");
   }
 }
 
-function setup() {
-  content.value.content = fileStore.value.content;
+function syntax(word: string): { color: string } {
+  let langStyle = { color: "" };
+
+  if (lang.value.symbols.includes(word)) {
+    langStyle = {
+      color: "#7dd87d",
+    };
+  }
+
+  if (lang.value.keyWords.includes(word)) {
+    langStyle = {
+      color: "#d59bf6",
+    };
+  }
+
+  return langStyle;
 }
-
-onMounted(() => {
-  document.addEventListener("keydown", keyEvent);
-
-  setup();
-});
 </script>
 
 <template>
-  <div class="flex flex-col justify-start items-start gap-2 w-full h-full">
-    <div v-html="computedValue" class="font-mono"></div>
+  <div
+    ref="divRef"
+    @keydown="keyEvent"
+    class="w-full h-full relative"
+    tabindex="0"
+  >
+    <CursorVue v-if="focused" ref="cursorRef" />
+    <div
+      v-for="(line, index) in formattedWords"
+      class="relative z-50 flex focus:outline-none"
+    >
+      <span class="w-7 text-slate-500">{{ index + 1 }}</span>
+      <template v-if="line.length === 0">
+        <br />
+      </template>
+      <template v-else>
+        <span v-for="word in line" class="word" :style="syntax(word)">
+          <template v-if="word === ' '">&#8199;</template>
+          <template v-else>{{ word }}</template>
+        </span>
+      </template>
+    </div>
   </div>
 </template>
-
-<style>
-.blink {
-  width: 2px;
-  height: 20px;
-  background-color: rgb(0, 255, 200);
-  animation: blink-animation 2s steps(2, start) infinite;
-  -webkit-animation: blink-animation 2s steps(2, start) infinite;
-}
-.absolute {
-  position: absolute;
-  top: 1px;
-  height: 15px;
-}
-.word {
-  position: relative;
-  text-decoration: none;
-}
-.line {
-  display: flex;
-  justify-content: flex-start;
-  align-self: center;
-}
-@keyframes blink-animation {
-  to {
-    visibility: hidden;
-  }
-}
-@-webkit-keyframes blink-animation {
-  to {
-    visibility: hidden;
-  }
-}
-</style>
