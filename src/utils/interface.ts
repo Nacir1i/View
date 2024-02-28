@@ -40,13 +40,14 @@ export interface DirectoryStore {
 export interface FileEntity {
   content: string[][];
   path: string;
-  extension?: string;
+  extension: string;
 }
 
 export interface FileStore {
   path: string;
   content: string[][];
-  set(path: string, content: string[][]): void;
+  extension: string;
+  set(path: string, content: string[][], extension: string): void;
 }
 
 export interface CommandHistory {
@@ -62,6 +63,7 @@ export interface Cursor {
   moveLeft(): void;
   moveUp(): void;
   moveDown(): void;
+  scrollIntoView(): void;
 }
 
 export interface Content {
