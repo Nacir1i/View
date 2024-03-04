@@ -1,20 +1,30 @@
 import { ViewConfig, View } from "./interface";
+import { LANG, Lang } from "./lang";
 
 export const VIEW_CONFIG: Record<View, ViewConfig> = {
   DIRECTORY: {
     title: "DIRECTORY",
-    backgroundColor: "#222831",
+    backgroundColor: "#32424a",
     color: "#ffebbb",
   },
   FILE: {
     title: "FILE",
-    backgroundColor: "#222831",
+    backgroundColor: "#333333",
     color: "#fafafa",
+  },
+  HELP: {
+    title: "HELP",
+    backgroundColor: "#393e46",
+    color: "#d3d6db",
   },
 } as const;
 
 export function viewConfig(view: View) {
   return VIEW_CONFIG[view] ?? null;
+}
+
+export function langConfig(lang: Lang) {
+  return LANG[lang] ?? { symbols: [], keyWords: [] };
 }
 
 export function convertDirSize(size: number): string {

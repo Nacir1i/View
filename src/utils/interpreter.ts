@@ -1,12 +1,13 @@
-import { Actions, Targets } from "./interface";
 import {
-  commandHistory,
-  directory,
-  directoryAbsolutePath,
-  file,
-  view,
-} from "../store";
+  Actions,
+  DirectoryEntity,
+  FileEntity,
+  Targets,
+  View,
+} from "./interface";
+import { commandHistory, directoryStore, fileStore, view } from "../store";
 import { invoke } from "@tauri-apps/api/tauri";
+import { join, resolve } from "@tauri-apps/api/path";
 
 export class Interpreter {
   private ACTIONS: Readonly<string[]> = [
@@ -15,6 +16,9 @@ export class Interpreter {
     "quit",
     "switch",
     "clear",
+    "create",
+    "save",
+    "help",
   ];
   private TARGET: Readonly<string[]> = ["dir", "file"];
 
@@ -56,6 +60,9 @@ export class Interpreter {
       case "quit":
         this.quitApp();
         break;
+      case "save":
+        this.updateFile();
+        break;
       case "change":
         if (target === "dir") {
           this.changeDirectory(arg);
@@ -67,17 +74,38 @@ export class Interpreter {
         }
         break;
       case "switch":
-        this.changeView();
+        if (!target) {
+          this.changeView();
+        } else if (target === "file") {
+          this.changeView("FILE");
+        } else if (target === "dir") {
+          this.changeView("DIRECTORY");
+        }
         break;
       case "clear":
         this.clearCommandHistory();
+        break;
+      case "create":
+        if (target === "file") {
+          this.createFile(`${directoryStore.value.path}/${arg}`);
+        } else if (target === "dir") {
+          this.createDir(`${directoryStore.value.path}/${arg}`);
+        }
+        break;
+      case "help":
+        this.changeView("HELP");
         break;
       default:
         break;
     }
   }
 
-  changeView() {
+  changeView(newView?: View) {
+    if (newView) {
+      view.value.setCurrentView(newView);
+      return;
+    }
+
     const desiredView =
       view.value.currentView === "DIRECTORY" ? "FILE" : "DIRECTORY";
 
@@ -85,31 +113,39 @@ export class Interpreter {
   }
 
   async changeDirectory(path: string) {
-    view.value.setCurrentView("DIRECTORY");
+    try {
+      const jumpsArray = path.split("/");
+      const newPath = await resolve(directoryStore.value.path, ...jumpsArray);
 
-    const jumpsArray = path.split("/");
-    const absolutPathArray = directoryAbsolutePath.value.path.split("/");
+      const data = await invoke<{
+        data: DirectoryEntity[];
+        absolute_path: string;
+      }>("open_dir", {
+        pathString: newPath,
+      });
 
-    for (let i = 0; i < jumpsArray.length; i++) {
-      if (jumpsArray[i] === "..") {
-        absolutPathArray.pop();
-      } else {
-        absolutPathArray.push(jumpsArray[i]);
-      }
+      directoryStore.value.set(newPath, data.data);
+
+      view.value.setCurrentView("DIRECTORY");
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
     }
-
-    const newAbsolutPath = absolutPathArray.join("/");
-
-    await directory.value.setPath(newAbsolutPath);
   }
 
   async openFile(path: string) {
-    view.value.setCurrentView("FILE");
+    try {
+      const newPath = await join(directoryStore.value.path, path);
 
-    const newPath = `${directoryAbsolutePath.value.path}/${path}`;
-    console.log({ newPath });
+      const data = await invoke<FileEntity>("open_file", {
+        pathString: newPath,
+      });
 
-    await file.value.setPath(newPath);
+      fileStore.value.set(newPath, data.content, data.extension);
+
+      view.value.setCurrentView("FILE");
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
   }
 
   async quitApp() {
@@ -118,6 +154,33 @@ export class Interpreter {
 
   clearCommandHistory() {
     commandHistory.value.clearHistory();
+  }
+
+  async createFile(path: string) {
+    try {
+      await invoke<void>("create_file_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async createDir(path: string) {
+    try {
+      await invoke<void>("create_dir_command", { pathString: path });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
+  }
+
+  async updateFile() {
+    try {
+      await invoke<void>("update_file_command", {
+        pathString: fileStore.value.path,
+        content: fileStore.value.content,
+      });
+    } catch (error) {
+      commandHistory.value.addHistory(error as string);
+    }
   }
 }
 

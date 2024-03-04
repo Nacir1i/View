@@ -4,6 +4,8 @@
 use chrono::offset::Utc;
 use chrono::DateTime;
 use std::{
+    char,
+    ffi::OsStr,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -43,9 +45,9 @@ pub struct DirectoryContent {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FileEntity {
-    pub content: String,
+    pub content: Vec<Vec<char>>,
     pub path: PathBuf,
-    pub extension: String,
+    pub extension: Option<String>,
 }
 
 #[tauri::command]
@@ -76,11 +78,63 @@ fn open_file(path_string: &str) -> Result<FileEntity, ViewError> {
         Err(error) => return Err(ViewError::Io(error)),
     };
 
+    let lines = content.lines().collect::<Vec<&str>>();
+    let chars = lines
+        .iter()
+        .map(|s| s.chars().collect())
+        .collect::<Vec<Vec<char>>>();
+
+    let file_extension = match path.extension().and_then(OsStr::to_str) {
+        Some(extension) => extension,
+        None => "",
+    };
+
     Ok(FileEntity {
-        content,
+        content: chars,
         path: path.to_path_buf(),
-        extension: "".into(),
+        extension: Some(file_extension.into()),
     })
+}
+
+#[tauri::command]
+fn create_file_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match create_file(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
+
+#[tauri::command]
+fn update_file_command(path_string: &str, content: Vec<Vec<char>>) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    let mut content_vec: Vec<char> = Vec::new();
+
+    for line in content.into_iter() {
+        for char in line.into_iter() {
+            content_vec.push(char);
+        }
+        content_vec.push(0xA as char);
+    }
+
+    let content_string = content_vec.into_iter().collect::<String>();
+
+    match update_file(path, content_string) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
+}
+
+#[tauri::command]
+fn create_dir_command(path_string: &str) -> Result<(), ViewError> {
+    let path = Path::new(path_string);
+
+    match create_dir(path) {
+        Ok(_) => Ok(()),
+        Err(error) => return Err(ViewError::Io(error)),
+    }
 }
 
 #[tauri::command]
@@ -126,6 +180,45 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
     }
 }
 
+fn create_file(path: &Path) -> Result<(), io::Error> {
+    if path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File already exists",
+        ));
+    }
+
+    let _ = fs::File::create(path)?;
+
+    Ok(())
+}
+
+fn create_dir(path: &Path) -> Result<(), io::Error> {
+    if path.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "Directory already exists",
+        ));
+    }
+
+    let _ = fs::create_dir(path)?;
+
+    Ok(())
+}
+
+fn update_file(path: &Path, content: String) -> Result<(), io::Error> {
+    if !path.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "File does not exist exists",
+        ));
+    }
+
+    fs::write(path, content)?;
+
+    Ok(())
+}
+
 // fn entry_size(entry: &DirEntry) -> io::Result<u64> {
 //     let mut size: u64 = 0;
 
@@ -144,7 +237,14 @@ fn read_file(file: &Path) -> Result<String, io::Error> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_dir, open_file, quit_app])
+        .invoke_handler(tauri::generate_handler![
+            open_dir,
+            open_file,
+            quit_app,
+            create_file_command,
+            create_dir_command,
+            update_file_command
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

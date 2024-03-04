@@ -1,37 +1,6 @@
 <script setup lang="ts">
-import { commandHistory, directory, directoryAbsolutePath } from "../store";
-import { invoke } from "@tauri-apps/api/tauri";
-import { onMounted, ref, watch } from "vue";
-import { DirectoryEntity } from "../utils/interface";
+import { directoryStore } from "../store";
 // import { convertDirSize } from "../utils/index";
-
-const content = ref<DirectoryEntity[]>([]);
-
-async function initContent() {
-  try {
-    const data = await invoke<{
-      data: DirectoryEntity[];
-      absolute_path: string;
-    }>("open_dir", {
-      pathString: directory.value.path,
-    });
-
-    if (data) {
-      content.value = data.data;
-      directoryAbsolutePath.value.setPath(data.absolute_path);
-    }
-  } catch (error) {
-    commandHistory.value.addHistory(error as string);
-  }
-}
-
-watch(directory.value, async (_newDir, _oldDir) => {
-  initContent();
-});
-
-onMounted(() => {
-  initContent();
-});
 </script>
 
 <template>
@@ -45,7 +14,7 @@ onMounted(() => {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="entity in content">
+      <tr v-for="entity in directoryStore.content">
         <!-- <td class="px-4">
           {{ convertDirSize(entity.size) }}
         </td> -->
